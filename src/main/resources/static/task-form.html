@@ -37,7 +37,8 @@
                     
                     <div class="form-group">
                         <label for="dueDate">期限</label>
-                        <input type="date" id="dueDate" name="dueDate" class="form-control">
+                        <input type="date" id="dueDate" name="dueDate" class="form-control" disabled>
+                        <small class="text-muted">※現在この機能は無効化されています</small>
                     </div>
                     
                     <div class="form-group">
@@ -120,10 +121,10 @@
             taskForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
+                // 日付フィールドを完全に除外
                 const formData = {
                     title: document.getElementById('title').value,
                     description: document.getElementById('description').value,
-                    dueDate: document.getElementById('dueDate').value,
                     status: document.getElementById('status').value,
                     priority: document.getElementById('priority').value
                 };

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスク作成・編集 | タスク管理ツール</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>タスク管理ツール</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="alert-container"></div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 id="form-title">新規タスク作成</h2>
+            </div>
+            <div class="card-body">
+                <form id="task-form">
+                    <input type="hidden" id="taskId" name="id">
+                    
+                    <div class="form-group">
+                        <label for="title">タイトル <span class="text-danger">*</span></label>
+                        <input type="text" id="title" name="title" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">説明</label>
+                        <textarea id="description" name="description" class="form-control" rows="4"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="dueDate">期限</label>
+                        <input type="date" id="dueDate" name="dueDate" class="form-control" disabled>
+                        <small class="text-muted">※現在この機能は無効化されています</small>
+                        <!-- 日付フィールドを非表示にして検証をスキップ -->
+                        <input type="hidden" id="hiddenDueDate" name="dueDate" value="">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="status">ステータス</label>
+                        <select id="status" name="status" class="form-control">
+                            <option value="NOT_STARTED">未着手</option>
+                            <option value="IN_PROGRESS">進行中</option>
+                            <option value="COMPLETED">完了</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="priority">優先度</label>
+                        <select id="priority" name="priority" class="form-control">
+                            <option value="LOW">低</option>
+                            <option value="MEDIUM">中</option>
+                            <option value="HIGH">高</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group text-right">
+                        <a href="/" class="btn btn-secondary">キャンセル</a>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskForm = document.getElementById('task-form');
+            const formTitle = document.getElementById('form-title');
+            const taskIdInput = document.getElementById('taskId');
+            const alertContainer = document.getElementById('alert-container');
+            
+            // URLからタスクIDを取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const taskId = urlParams.get('id');
+            
+            // 編集モードの場合、タスク情報を取得して表示
+            if (taskId) {
+                formTitle.textContent = 'タスク編集';
+                
+                fetch(`/api/tasks/${taskId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('タスクが見つかりません');
+                        }
+                        return response.json();
+                    })
+                    .then(task => {
+                        taskIdInput.value = task.id;
+                        document.getElementById('title').value = task.title;
+                        document.getElementById('description').value = task.description || '';
+                        
+                        if (task.dueDate) {
+                            const dueDate = new Date(task.dueDate);
+                            const year = dueDate.getFullYear();
+                            const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+                            const day = String(dueDate.getDate()).padStart(2, '0');
+                            document.getElementById('dueDate').value = `${year}-${month}-${day}`;
+                        }
+                        
+                        document.getElementById('status').value = task.status;
+                        document.getElementById('priority').value = task.priority;
+                    })
+                    .catch(error => {
+                        console.error('タスクの取得に失敗しました:', error);
+                        alertContainer.innerHTML = `
+                            <div class="alert alert-danger">
+                                タスクの取得に失敗しました: ${error.message}
+                            </div>
+                        `;
+                    });
+            }
+            
+            // フォーム送信処理
+            taskForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // 日付フィールドを完全に除外
+                const formData = {
+                    title: document.getElementById('title').value,
+                    description: document.getElementById('description').value,
+                    status: document.getElementById('status').value,
+                    priority: document.getElementById('priority').value
+                };
+                
+                if (taskId) {
+                    formData.id = taskId;
+                }
+                
+                const url = taskId ? `/api/tasks/${taskId}` : '/api/tasks';
+                const method = taskId ? 'PUT' : 'POST';
+                
+                fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('タスクの保存に失敗しました');
+                    }
+                    return response.json();
+                })
+                .then(savedTask => {
+                    // 保存成功後、タスク一覧ページにリダイレクト
+                    window.location.href = '/?success=true';
+                })
+                .catch(error => {
+                    console.error('タスクの保存に失敗しました:', error);
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            タスクの保存に失敗しました: ${error.message}
+                        </div>
+                    `;
+                });
+            });
+        });
+    </script>
+</body>
+</html>

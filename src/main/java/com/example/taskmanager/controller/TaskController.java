@@ -13,10 +13,10 @@ import org.springframework.web.servlet.view.RedirectView;
 public class TaskController {
 
     /**
-     * ルートパスへのアクセスをindex.htmlにリダイレクト
+     * タスク一覧ページへのリダイレクト
      * @return リダイレクト先
      */
-    @GetMapping("/")
+    @GetMapping("/tasks")
     public String index() {
         return "redirect:/index.html";
     }

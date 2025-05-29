@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスク詳細 | タスク管理ツール</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>タスク管理ツール</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="alert-container"></div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>タスク詳細</h2>
+            </div>
+            <div class="card-body">
+                <div id="task-detail">
+                    <div class="mb-3">
+                        <h3 id="task-title"></h3>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="fw-bold">説明:</div>
+                        <div id="task-description"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="fw-bold">期限:</div>
+                        <div id="task-due-date"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="fw-bold">ステータス:</div>
+                        <div id="task-status"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="fw-bold">優先度:</div>
+                        <div id="task-priority"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/" class="btn btn-secondary">戻る</a>
+                <a id="edit-link" href="#" class="btn btn-warning">編集</a>
+                <a id="delete-link" href="#" class="btn btn-danger delete-task">削除</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const alertContainer = document.getElementById('alert-container');
+            
+            // URLからタスクIDを取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const taskId = urlParams.get('id');
+            
+            if (!taskId) {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        タスクIDが指定されていません
+                    </div>
+                `;
+                return;
+            }
+            
+            // 編集リンクと削除リンクの設定
+            document.getElementById('edit-link').href = `/task-form.html?id=${taskId}`;
+            
+            const deleteLink = document.getElementById('delete-link');
+            deleteLink.href = `#`;
+            deleteLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (confirm('このタスクを削除してもよろしいですか？')) {
+                    fetch(`/api/tasks/${taskId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('タスクの削除に失敗しました');
+                        }
+                        // 削除成功後、タスク一覧ページにリダイレクト
+                        window.location.href = '/?deleted=true';
+                    })
+                    .catch(error => {
+                        console.error('タスクの削除に失敗しました:', error);
+                        alertContainer.innerHTML = `
+                            <div class="alert alert-danger">
+                                タスクの削除に失敗しました: ${error.message}
+                            </div>
+                        `;
+                    });
+                }
+            });
+            
+            // タスク情報を取得して表示
+            fetch(`/api/tasks/${taskId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('タスクが見つかりません');
+                    }
+                    return response.json();
+                })
+                .then(task => {
+                    document.title = `${task.title} | タスク管理ツール`;
+                    
+                    document.getElementById('task-title').textContent = task.title;
+                    document.getElementById('task-description').textContent = task.description || '(説明なし)';
+                    
+                    // 日付のフォーマット
+                    if (task.dueDate) {
+                        const dueDate = new Date(task.dueDate);
+                        const formattedDate = `${dueDate.getFullYear()}/${(dueDate.getMonth() + 1).toString().padStart(2, '0')}/${dueDate.getDate().toString().padStart(2, '0')}`;
+                        document.getElementById('task-due-date').textContent = formattedDate;
+                    } else {
+                        document.getElementById('task-due-date').textContent = '(期限なし)';
+                    }
+                    
+                    // ステータスの表示名
+                    let statusDisplay = '';
+                    switch(task.status) {
+                        case 'NOT_STARTED':
+                            statusDisplay = '<span class="status-badge status-not-started">未着手</span>';
+                            break;
+                        case 'IN_PROGRESS':
+                            statusDisplay = '<span class="status-badge status-in-progress">進行中</span>';
+                            break;
+                        case 'COMPLETED':
+                            statusDisplay = '<span class="status-badge status-completed">完了</span>';
+                            break;
+                    }
+                    document.getElementById('task-status').innerHTML = statusDisplay;
+                    
+                    // 優先度の表示名
+                    let priorityDisplay = '';
+                    switch(task.priority) {
+                        case 'LOW':
+                            priorityDisplay = '<span class="status-badge priority-low">低</span>';
+                            break;
+                        case 'MEDIUM':
+                            priorityDisplay = '<span class="status-badge priority-medium">中</span>';
+                            break;
+                        case 'HIGH':
+                            priorityDisplay = '<span class="status-badge priority-high">高</span>';
+                            break;
+                    }
+                    document.getElementById('task-priority').innerHTML = priorityDisplay;
+                })
+                .catch(error => {
+                    console.error('タスクの取得に失敗しました:', error);
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            タスクの取得に失敗しました: ${error.message}
+                        </div>
+                    `;
+                });
+        });
+    </script>
+</body>
+</html>
